@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Draggable Boxes for Temperature, Icons, Wind, Precipitation & Date Stamp Forecast</title>
+  <!-- Include html2canvas from a CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* Reset styles */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+    }
+    /* Wrap all content (except password overlay) to allow blurring */
+    #mainContent {
+      filter: blur(10px);
+      transition: filter 0.3s ease;
+    }
+    /* Container for background image and overlays */
+    #canvas {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid #333;
+    }
+    /* Background image */
+    #bgImage {
+      width: 1920px;
+      height: 1080px;
+      display: block;
+    }
+    /* Common box styling */
+    .temp-box {
+      position: absolute;
+      font-family: 'Overpass Black', sans-serif;
+      font-size: 72px;
+      color: #FFF;
+      text-align: center;
+      background-color: transparent;
+      border: 0;
+      padding: 10px;
+      text-shadow: 0 0 5px #00F, 0 0 5px #00F;
+      border-radius: 5px;
+      box-sizing: border-box;
+      width: 15%;
+      cursor: move;
+      user-select: none;
+    }
+    /* Enlarged icon boxes */
+    .temp-box.icon-box {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 130px;
+      width: 25%;
+    }
+    .forecast-icon {
+      vertical-align: center;
+      margin-right: 5px;
+      width: 90px;
+      height: auto;
+    }
+    /* Precipitation boxes */
+    .precip-box {
+      font-family: 'Overpass Black', cursive, sans-serif;
+      font-size: 24px;
+      color: #32CD32;
+      text-shadow: 0 0 10px #000;
+      background-color: transparent;
+      width: 33%;
+      text-align: right;
+    }
+    /* Date stamp box */
+    .date-stamp {
+      font-family: 'Overpass Black', cursive, sans-serif;
+      font-size: 36px;
+      color: #FFF;
+      text-shadow: 0 0 20px #000, 0 0 10px #000, 0 0 10px #000;
+      background-color: transparent;
+      width: 33%;
+      text-align: left;
+      position: absolute;
+    }
+    .date-stamp .advance-date {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      background: rgba(0,0,0,0.6);
+      color: #FFF;
+      padding: 5px 10px;
+      border-radius: 3px;
+      font-size: 16px;
+      visibility: hidden;
+      cursor: pointer;
+      z-index: 10;
+    }
+    .date-stamp:hover .advance-date {
+      visibility: visible;
+    }
+    /* Tooltip styling */
+    .tooltip {
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: #FFF;
+      font-size: 12px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      pointer-events: none;
+      visibility: hidden;
+    }
+    /* Modal styles */
+    #overrideModal,
+    #windCustomizeModal,
+    #precipCustomizeModal,
+    #dateStampCustomizeModal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 300px;
+      border-radius: 5px;
+    }
+    .modal-content input[type="text"],
+    .modal-content input[type="number"],
+    .modal-content input[type="color"] {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0 12px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    .modal-content button {
+      padding: 8px 16px;
+      font-size: 16px;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+    /* Wind box styling */
+    .wind-box {
+      font-family: 'Overpass Black', cursive, sans-serif;
+      font-size: 25px;
+      color: #FF0;
+      text-shadow: 0 0 10px #000;
+      background-color: transparent;
+      width: 33%;
+      text-align: center;
+    }
+    /* Global Icon Dropdown */
+    #iconDropdown {
+      display: none;
+      position: absolute;
+      background: #FFF;
+      border: 1px solid #CCC;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1500;
+    }
+    #iconDropdown .icon-dropdown-item {
+      padding: 5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    #iconDropdown .icon-dropdown-item:hover {
+      background: #EEE;
+    }
+    #iconDropdown .icon-dropdown-item img {
+      width: 40px;
+      height: auto;
+    }
+    #iconDropdown .icon-dropdown-item span {
+      margin-left: 5px;
+      font-size: 14px;
+      color: #000;
+    }
+    /* -------------------------
+       PASSWORD & BLUR STYLES
+       ------------------------- */
+    /* Password Overlay */
+    #passwordOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100000;
+    }
+    #passwordBox {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    #passwordBox input {
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+      width: 200px;
+    }
+    #passwordBox button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Main Content Wrapped for Blurring -->
+  <div id="mainContent">
+    <!-- Main Canvas -->
+    <div id="canvas">
+      <!-- The background image element -->
+      <img id="bgImage" src="background.png" alt="Bus Stop Background">
+      
+      <!-- ICON & TEMPERATURE BOXES -->
+      <!-- City 1: Findlay -->
+      <div id="iconBox1" class="temp-box icon-box" style="top: 18%; left: 10.64%;">
+        <div class="content"></div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="tempBox1" class="temp-box" style="top: 22%; left: 28.70%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <!-- City 2: Columbus -->
+      <div id="iconBox2" class="temp-box icon-box" style="top: 34%; left: 10.64%;">
+        <div class="content"></div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="tempBox2" class="temp-box" style="top: 38%; left: 28.70%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <!-- City 3: Jackson -->
+      <div id="iconBox3" class="temp-box icon-box" style="top: 49.5%; left: 10.64%;">
+        <div class="content"></div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="tempBox3" class="temp-box" style="top: 53.5%; left: 28.70%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <!-- City 4: Akron -->
+      <div id="iconBox4" class="temp-box icon-box" style="top: 65.5%; left: 10.64%;">
+        <div class="content"></div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="tempBox4" class="temp-box" style="top: 69.5%; left: 28.70%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <!-- City 5: Dayton -->
+      <div id="iconBox5" class="temp-box icon-box" style="top: 80.5%; left: 10.64%;">
+        <div class="content"></div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="tempBox5" class="temp-box" style="top: 84%; left: 28.70%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      
+      <!-- WIND FORECAST BOXES -->
+      <div id="windBox1" class="temp-box wind-box" style="top: 23.6319%; left: 35.02%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="windBox2" class="temp-box wind-box" style="top: 39.5747%; left: 35.02%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="windBox3" class="temp-box wind-box" style="top: 55.3177%; left: 35.02%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="windBox4" class="temp-box wind-box" style="top: 71.158%; left: 35.02%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="windBox5" class="temp-box wind-box" style="top: 86.1372%; left: 35.02%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      
+      <!-- PRECIPITATION FORECAST BOXES -->
+      <div id="precipBox1" class="temp-box precip-box" style="top: 26.7205%; left: -2.5%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="precipBox2" class="temp-box precip-box" style="top: 42.658%; left: -2.36%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="precipBox3" class="temp-box precip-box" style="top: 58.441%; left: -2.36%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="precipBox4" class="temp-box precip-box" style="top: 74.5833%; left: -2.36%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      <div id="precipBox5" class="temp-box precip-box" style="top: 89.4566%; left: -2.36%;">
+        <div class="content">Loading...</div>
+        <div class="tooltip"></div>
+      </div>
+      
+      <!-- DATE STAMP BOX -->
+      <div id="dateStamp" class="temp-box date-stamp" style="top: 7.25%; left: 24.75%;">
+        <div class="content"></div>
+        <div class="advance-date" title="Advance Date">Advance</div>
+        <div class="tooltip"></div>
+      </div>
+    </div>
+    
+    <!-- Global Icon Dropdown -->
+    <div id="iconDropdown"></div>
+    
+    <!-- Override Modal (used for Temperature, Precipitation, and Wind) -->
+    <div id="overrideModal">
+      <div class="modal-content">
+        <h3 id="overrideModalHeader">Override Value</h3>
+        <label id="overrideLabel" for="overrideInput">New Value:</label>
+        <input type="text" id="overrideInput" placeholder="Enter new value">
+        <div style="text-align: right;">
+          <button id="saveBtn">Save</button>
+          <button id="cancelBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Background Image Update Script and Rest of the JS -->
+    <script>
+      /*********** New: Background Image per Day ***********/
+      const dailyBackgrounds = {
+        0: "background 1.png",
+        1: "background 1.png",
+        2: "background 1.png",
+        3: "background 1.png",
+        4: "background 1.png",
+        5: "background 1.png",
+        6: "background 1.png"
+      };
+      function updateBackgroundForToday() {
+        const today = new Date().getDay();
+        const bgImg = document.getElementById("bgImage");
+        if (dailyBackgrounds[today]) {
+          bgImg.src = dailyBackgrounds[today];
+        }
+      }
+      updateBackgroundForToday();
+      /*********** End Background Image Section ***********/
+      
+      // Utility functions
+      function rgbToHex(rgb) {
+        const result = rgb.match(/\d+/g);
+        if (result && result.length >= 3) {
+          return "#" + result.slice(0, 3).map(x => {
+            const hex = parseInt(x).toString(16);
+            return hex.length === 1 ? "0" + hex : hex;
+          }).join("");
+        }
+        return "#000000";
+      }
+      function getOrdinalSuffix(day) {
+        if (day > 3 && day < 21) return "th";
+        switch (day % 10) {
+          case 1: return "st";
+          case 2: return "nd";
+          case 3: return "rd";
+          default: return "th";
+        }
+      }
+      
+      // Date stamp update
+      let dateOffset = 0;
+      function updateDateStamp() {
+        const now = new Date();
+        now.setDate(now.getDate() + dateOffset);
+        const month = now.toLocaleString('default', { month: 'long' });
+        const day = now.getDate();
+        const suffix = getOrdinalSuffix(day);
+        const year = now.getFullYear();
+        document.getElementById("dateStamp").querySelector(".content").innerHTML = `${month} ${day}${suffix} ${year}`;
+      }
+      updateDateStamp();
+      document.querySelector('.date-stamp .advance-date').addEventListener('click', function(e) {
+        e.stopPropagation();
+        dateOffset++;
+        updateDateStamp();
+      });
+      
+      // Custom icon mapping (update paths as needed)
+      const customIconMapping = {
+        "areas drizzle": "areas-drizzle.png",
+        "areas drizzle/sleet": "areas-drizzle-sleet.png",
+        "areas flurries": "areas-flurries.png",
+        "areas flurries/drizzle": "areas-flurries-drizzle.png",
+        "areas flurries/rain": "areas-flurries-rain.png",
+        "areas flurries/sprinkles": "areas-flurries-sprinkles.png",
+        "areas fog": "areas-fog.png",
+        "areas frost": "areas-frost.png",
+        "areas freezing drizzle": "areas-freezing-drizzle.png",
+        "areas freezing fog": "areas-freezing-fog.png",
+        "areas freezing rain": "areas-freezing-rain.png",
+        "areas haze": "areas-haze.png",
+        "areas light snow": "areas-light-snow.png",
+        "areas rain": "areas-rain.png",
+        "areas rain/sleet": "areas-rain-sleet.png",
+        "areas showers": "areas-showers.png",
+        "areas smoke": "areas-smoke.png",
+        "areas snow": "areas-snow.png",
+        "areas snow/drizzle": "areas-snow-drizzle.png",
+        "areas snow/rain": "areas-snow-rain.png",
+        "areas snow/sprinkles": "areas-snow-sprinkles.png",
+        "areas sprinkles": "areas-sprinkles.png",
+        "areas sprinkles/sleet": "areas-sprinkles-sleet.png",
+        "areas t-storms": "areas-t-storms.png",
+        "becoming cloudy": "becoming-cloudy.png",
+        "becoming sunny": "becoming-sunny.png",
+        "blowing dust": "blowing-dust.png",
+        "blowing snow": "blowing-snow.png",
+        "blustery": "blustery.png",
+        "breezy": "breezy.png",
+        "chance drizzle": "chance-drizzle.png",
+        "chance flurries": "chance-flurries.png",
+        "chance flurries/drizzle": "chance-flurries-drizzle.png",
+        "chance flurries/rain": "chance-flurries-rain.png",
+        "chance flurries/sprinkles": "chance-flurries-sprinkles.png",
+        "chance freezing drizzle": "chance-freezing-drizzle.png",
+        "chance freezing rain": "chance-freezing-rain.png",
+        "chance light snow": "chance-light-snow.png",
+        "chance rain": "chance-rain.png",
+        "chance rain/sleet": "chance-rain-sleet.png",
+        "chance showers": "chance-showers.png",
+        "chance snow": "chance-snow.png",
+        "chance snow/drizzle": "chance-snow-drizzle.png",
+        "chance snow/rain": "chance-snow-rain.png",
+        "chance snow/sprinkles": "chance-snow-sprinkles.png",
+        "chance sprinkles": "chance-sprinkles.png",
+        "chance t-storms": "chance-t-storms.png",
+        "clear": "clear.png",
+        "clearing": "clearing.png",
+        "clearing late": "clearing-late.png",
+        "cloudy": "cloudy.png",
+        "cold": "cold.png",
+        "decreasing clouds": "decreasing-clouds.png",
+        "dense fog": "dense-fog.png",
+        "dense freezing fog": "dense-freezing-fog.png",
+        "drizzle": "drizzle.png",
+        "drizzle likely": "drizzle-likely.png",
+        "drizzle/sleet": "drizzle-sleet.png",
+        "drizzle/sleet likely": "drizzle-sleet-likely.png",
+        "flurries": "flurries.png",
+        "flurries likely": "flurries-likely.png",
+        "flurries/drizzle": "flurries-drizzle.png",
+        "flurries/drizzle likely": "flurries-drizzle-likely.png",
+        "flurries/rain": "flurries-rain.png",
+        "flurries/rain likely": "flurries-rain-likely.png",
+        "flurries/sprinkles": "flurries-sprinkles.png",
+        "flurries/sprinkles likely": "flurries-sprinkles-likely.png",
+        "gradual clearing": "gradual-clearing.png",
+        "heavy rain": "heavy-rain.png",
+        "heavy snow": "heavy-snow.png",
+        "hot": "hot.png",
+        "haze": "haze.png",
+        "increasing clouds": "increasing-clouds.png",
+        "isolated drizzle": "isolated-drizzle.png",
+        "isolated fog": "isolated-foggy.png",
+        "isolated freezing fog": "isolated-freezing-fog.png",
+        "isolated frost": "isolated-frost.png",
+        "isolated haze": "isolated-haze.png",
+        "isolated rain": "isolated-rain.png",
+        "isolated showers": "isolated-showers.png",
+        "isolated smoke": "isolated-smoke.png",
+        "isolated sprinkles": "isolated-sprinkles.png",
+        "isolated t-storms": "isolated-t-storms.png",
+        "light snow": "light-snow.png",
+        "light snow likely": "light-snow-likely.png",
+        "mostly clear": "mostly-clear.png",
+        "mostly cloudy": "mostly-cloudy.png",
+        "mostly sunny": "mostly-sunny.png",
+        "morning frost": "morning-frost.png",
+        "patchy fog": "patchy-foggy.png",
+        "patchy freezing fog": "patchy-freezing-fog.png",
+        "patchy frost": "patchy-frost.png",
+        "patchy haze": "patchy-haze.png",
+        "patchy smoke": "patchy-smoke.png",
+        "partly cloudy": "partly-cloudy.png",
+        "partly sunny": "partly-sunny.png",
+        "rain": "rain.png",
+        "rain likely": "rain-likely.png",
+        "rain/sleet": "rain-sleet.png",
+        "rain/sleet likely": "rain-sleet-likely.png",
+        "snow showers": "snow.png",
+        "showers": "showers.png",
+        "showers likely": "showers-likely.png",
+        "smoke": "smoke.png",
+        "snow": "snow.png",
+        "snow likely": "snow-likely.png",
+        "snow showers likely": "snow-likely.png",
+        "snow/drizzle": "snow-drizzle.png",
+        "snow/drizzle likely": "snow-drizzle-likely.png",
+        "snow/rain": "snow-rain.png",
+        "snow/rain likely": "snow-rain-likely.png",
+        "snow/sprinkles": "snow-sprinkles.png",
+        "snow/sprinkles likely": "snow-sprinkles-likely.png",
+        "sleet": "sleet.png",
+        "slight chance drizzle": "slight-chance-drizzle.png",
+        "slight chance drizzle/sleet": "slight-chance-drizzle-sleet.png",
+        "slight chance flurries": "slight-chance-flurries.png",
+        "slight chance flurries/drizzle": "slight-chance-flurries-drizzle.png",
+        "slight chance flurries/rain": "slight-chance-flurries-rain.png",
+        "slight chance flurries/sprinkles": "slight-chance-flurries-sprinkles.png",
+        "slight chance freezing drizzle": "slight-chance-freezing-drizzle.png",
+        "slight chance freezing rain": "slight-chance-freezing-rain.png",
+        "slight chance light snow": "slight-chance-light-snow.png",
+        "slight chance rain": "slight-chance-rain.png",
+        "slight chance rain/sleet": "slight-chance-rain-sleet.png",
+        "slight chance showers": "slight-chance-showers.png",
+        "slight chance snow": "slight-chance-snow.png",
+        "slight chance snow/drizzle": "slight-chance-snow-drizzle.png",
+        "slight chance snow/rain": "slight-chance-snow-rain.png",
+        "slight chance snow/sprinkles": "slight-chance-snow-sprinkles.png",
+        "slight chance sprinkles": "slight-chance-sprinkles.png",
+        "slight chance sprinkles/sleet": "slight-chance-sprinkles-sleet.png",
+        "slight chance t-storms": "slight-chance-t-storms.png",
+        "sprinkles": "sprinkles.png",
+        "sprinkles likely": "sprinkles-likely.png",
+        "sprinkles/sleet": "sprinkles-sleet.png",
+        "sprinkles/sleet likely": "sprinkles-sleet-likely.png",
+        "sunny": "sunny.png",
+        "t-storms": "t-storms.png",
+        "t-storms likely": "t-storms-likely.png",
+        "very windy": "very-windy.png",
+        "windy": "windy.png",
+        "wintry mix": "wintry-mix.png"
+      };
+      
+      /**************************************
+       * Asynchronous Fetch Functions with Override Check
+       **************************************/
+      
+      async function fetchTemperature(city) {
+        try {
+          const tempBox = document.getElementById(city.tempElementId);
+          if (tempBox.querySelector('.content').getAttribute("data-override") === "true") return;
+          const pointsResponse = await fetch(`https://api.weather.gov/points/${city.lat},${city.lon}`);
+          if (!pointsResponse.ok) throw new Error(`Error fetching point data for ${city.name}`);
+          const pointsData = await pointsResponse.json();
+          const forecastHourlyUrl = pointsData.properties.forecastHourly;
+          const forecastResponse = await fetch(forecastHourlyUrl);
+          if (!forecastResponse.ok) throw new Error(`Error fetching forecast data for ${city.name}`);
+          const forecastData = await forecastResponse.json();
+          const now = new Date();
+          let targetPeriod = forecastData.properties.periods.find(period => {
+            const periodTime = new Date(period.startTime);
+            return periodTime.getHours() === 8 && periodTime >= now;
+          }) || forecastData.properties.periods[0];
+          tempBox.querySelector('.content').innerHTML = targetPeriod ? targetPeriod.temperature + '°' + targetPeriod.temperatureUnit : 'No data';
+          
+          // Determine matching icon URL based on forecast
+          const lowerForecast = targetPeriod && targetPeriod.shortForecast ? targetPeriod.shortForecast.toLowerCase() : "";
+          let iconUrl = "default.png";
+          const sortedConditions = Object.keys(customIconMapping).sort((a, b) => b.length - a.length);
+          for (const condition of sortedConditions) {
+            if (lowerForecast.includes(condition)) {
+              iconUrl = customIconMapping[condition];
+              break;
+            }
+          }
+          console.log("City:", city.name, "Forecast:", targetPeriod.shortForecast, "Chosen icon URL:", iconUrl);
+          
+          const iconBox = document.getElementById(city.iconElementId);
+          iconBox.innerHTML = "";
+          const img = document.createElement('img');
+          img.src = iconUrl;
+          img.alt = "";
+          img.classList.add('forecast-icon');
+          iconBox.appendChild(img);
+        } catch (error) {
+          console.error(error);
+          document.getElementById(city.tempElementId).querySelector('.content').innerHTML = 'Error loading data';
+        }
+      }
+      
+      function fetchPrecipForecast(city) {
+        const precipContent = document.getElementById(city.precipElementId).querySelector('.content');
+        if (precipContent.getAttribute("data-override") === "true") return;
+        fetch(`https://api.weather.gov/points/${city.lat},${city.lon}`)
+          .then(response => {
+            if (!response.ok) throw new Error('Error fetching point data for ' + city.name);
+            return response.json();
+          })
+          .then(data => {
+            const forecastHourlyUrl = data.properties.forecastHourly;
+            return fetch(forecastHourlyUrl);
+          })
+          .then(response => {
+            if (!response.ok) throw new Error('Error fetching forecast data for ' + city.name);
+            return response.json();
+          })
+          .then(data => {
+            const periods = data.properties.periods;
+            let targetPeriod = periods.find(period => new Date(period.startTime).getHours() === 8) || periods[0];
+            precipContent.innerHTML = (targetPeriod && targetPeriod.probabilityOfPrecipitation &&
+              typeof targetPeriod.probabilityOfPrecipitation.value === "number") ? 
+              `${targetPeriod.probabilityOfPrecipitation.value}%` : '0%';
+          })
+          .catch(error => {
+            console.error('Error for', city.name, error);
+            precipContent.innerHTML = 'Error';
+          });
+      }
+      
+      function fetchWindForecast(city) {
+        const windBox = document.getElementById(city.elementId);
+        const windContent = windBox.querySelector('.content');
+        if (windContent.getAttribute("data-override") === "true") return;
+        fetch(`https://api.weather.gov/points/${city.lat},${city.lon}`)
+          .then(response => {
+            if (!response.ok) throw new Error('Error fetching point data for ' + city.name);
+            return response.json();
+          })
+          .then(data => {
+            const forecastHourlyUrl = data.properties.forecastHourly;
+            return fetch(forecastHourlyUrl);
+          })
+          .then(response => {
+            if (!response.ok) throw new Error('Error fetching forecast data for ' + city.name);
+            return response.json();
+          })
+          .then(data => {
+            const periods = data.properties.periods;
+            const targetPeriod = periods.find(period => new Date(period.startTime).getHours() === 8);
+            if (targetPeriod && targetPeriod.windDirection && targetPeriod.windSpeed) {
+              let direction = targetPeriod.windDirection.trim();
+              direction = (direction.length > 2) ? direction.substring(0, 2).toUpperCase() : direction.toUpperCase();
+              windContent.innerHTML = `${direction} ${targetPeriod.windSpeed}`;
+            } else {
+              windContent.innerHTML = 'N/A';
+            }
+          })
+          .catch(error => {
+            console.error('Error for', city.name, error);
+            windContent.innerHTML = 'Error';
+          });
+      }
+      
+      const cities = [
+        { name: "Defiance",  lat: 41.2845, lon: -84.3558, tempElementId: "tempBox1", iconElementId: "iconBox1", precipElementId: "precipBox1" },
+        { name: "Columbus", lat: 39.9612, lon: -82.9988, tempElementId: "tempBox2", iconElementId: "iconBox2", precipElementId: "precipBox2" },
+        { name: "Jackson",  lat: 39.1167, lon: -82.9333, tempElementId: "tempBox3", iconElementId: "iconBox3", precipElementId: "precipBox3" },
+        { name: "Akron",    lat: 41.0814, lon: -81.5190, tempElementId: "tempBox4", iconElementId: "iconBox4", precipElementId: "precipBox4" },
+        { name: "Dayton",   lat: 39.7589, lon: -84.1916, tempElementId: "tempBox5", iconElementId: "iconBox5", precipElementId: "precipBox5" }
+      ];
+      const windCities = [
+        { name: "Findlay",  lat: 41.0440, lon: -83.6490, elementId: "windBox1" },
+        { name: "Columbus", lat: 39.9612, lon: -82.9988, elementId: "windBox2" },
+        { name: "Jackson",  lat: 39.1167, lon: -82.9333, elementId: "windBox3" },
+        { name: "Akron",    lat: 41.0814, lon: -81.5190, elementId: "windBox4" },
+        { name: "Dayton",   lat: 39.7589, lon: -84.1916, elementId: "windBox5" }
+      ];
+      
+      cities.forEach(city => {
+        fetchTemperature(city);
+        fetchPrecipForecast(city);
+      });
+      windCities.forEach(city => fetchWindForecast(city));
+      
+      /**************************************
+       * Drag & Drop Setup (10px threshold)
+       **************************************/
+      const canvas = document.getElementById('canvas');
+      let currentDrag = null;
+      let dragOffsetX = 0, dragOffsetY = 0;
+      let containerRect = null;
+      let dragStartX = 0, dragStartY = 0;
+      let dragging = false;
+      
+      function updateBoxPosition(box) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const boxRect = box.getBoundingClientRect();
+        const leftPercent = ((boxRect.left - canvasRect.left) / canvasRect.width) * 100;
+        const topPercent = ((boxRect.top - canvasRect.top) / canvasRect.height) * 100;
+        box.style.left = leftPercent + '%';
+        box.style.top = topPercent + '%';
+      }
+      
+      document.querySelectorAll('.temp-box').forEach(box => {
+        box.addEventListener('mousedown', function(e) {
+          currentDrag = box;
+          containerRect = canvas.getBoundingClientRect();
+          const boxRect = box.getBoundingClientRect();
+          dragOffsetX = e.clientX - boxRect.left;
+          dragOffsetY = e.clientY - boxRect.top;
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          dragging = false;
+          box.style.zIndex = 1000;
+        });
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (currentDrag) {
+          const dx = e.clientX - dragStartX;
+          const dy = e.clientY - dragStartY;
+          if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            dragging = true;
+          }
+          const newLeft = e.clientX - containerRect.left - dragOffsetX;
+          const newTop = e.clientY - containerRect.top - dragOffsetY;
+          currentDrag.style.left = newLeft + "px";
+          currentDrag.style.top = newTop + "px";
+        }
+      });
+      
+      document.addEventListener('mouseup', function(e) {
+        if (currentDrag) {
+          currentDrag.style.zIndex = "";
+          updateBoxPosition(currentDrag);
+          currentDrag = null;
+        }
+        setTimeout(() => { dragging = false; }, 0);
+      });
+      
+      /**************************************
+       * Override Click Handlers (for temp, precip, and wind)
+       **************************************/
+      document.querySelectorAll('#tempBox1, #tempBox2, #tempBox3, #tempBox4, #tempBox5')
+        .forEach(box => {
+          box.addEventListener('click', function(e) {
+            if (!dragging) {
+              openOverrideDialog(box);
+            }
+          });
+        });
+      document.querySelectorAll('.precip-box')
+        .forEach(box => {
+          box.addEventListener('click', function(e) {
+            if (!dragging) {
+              openOverrideDialog(box);
+            }
+          });
+        });
+      document.querySelectorAll('.wind-box')
+        .forEach(box => {
+          box.addEventListener('click', function(e) {
+            if (!dragging) {
+              openOverrideDialog(box);
+            }
+          });
+        });
+      
+      /**************************************
+       * Override Modal (for all types)
+       **************************************/
+      const overrideModal = document.getElementById('overrideModal');
+      const overrideInput = document.getElementById('overrideInput');
+      const saveBtn = document.getElementById('saveBtn');
+      const cancelBtn = document.getElementById('cancelBtn');
+      let currentOverrideBox = null;
+      
+      function openOverrideDialog(box) {
+        currentOverrideBox = box;
+        let headerText, labelText, placeholder;
+        if (box.classList.contains('precip-box')) {
+          headerText = "Override Precipitation";
+          labelText = "New Precipitation (%):";
+          placeholder = "e.g., 20%";
+        } else if (box.classList.contains('wind-box')) {
+          headerText = "Override Wind";
+          labelText = "New Wind:";
+          placeholder = "e.g., NW 10 mph";
+        } else {
+          headerText = "Override Temperature";
+          labelText = "New Temperature:";
+          placeholder = "e.g., 50°F";
+        }
+        document.getElementById("overrideModalHeader").innerText = headerText;
+        document.getElementById("overrideLabel").innerText = labelText;
+        overrideInput.placeholder = placeholder;
+        overrideInput.value = box.querySelector('.content').innerText || '';
+        overrideModal.style.display = 'block';
+        overrideInput.focus();
+      }
+      
+      saveBtn.addEventListener('click', function() {
+        if (currentOverrideBox) {
+          const newValue = overrideInput.value.trim();
+          const contentEl = currentOverrideBox.querySelector('.content');
+          contentEl.innerHTML = newValue ? newValue : 'N/A';
+          contentEl.setAttribute("data-override", "true");
+        }
+        overrideModal.style.display = 'none';
+        currentOverrideBox = null;
+      });
+      
+      cancelBtn.addEventListener('click', function() {
+        overrideModal.style.display = 'none';
+        currentOverrideBox = null;
+      });
+      
+      window.addEventListener('click', function(e) {
+        if (e.target === overrideModal) {
+          overrideModal.style.display = 'none';
+          currentOverrideBox = null;
+        }
+      });
+      
+      /**************************************
+       * Global Icon Dropdown (unchanged)
+       **************************************/
+      const iconDropdown = document.getElementById('iconDropdown');
+      let currentIconBox = null;
+      
+      for (const condition in customIconMapping) {
+        const item = document.createElement('div');
+        item.className = 'icon-dropdown-item';
+        const img = document.createElement('img');
+        img.src = customIconMapping[condition];
+        img.alt = condition;
+        const span = document.createElement('span');
+        span.textContent = condition;
+        item.appendChild(img);
+        item.appendChild(span);
+        item.addEventListener('click', function(e) {
+          if (currentIconBox) {
+            currentIconBox.innerHTML = "";
+            const newImg = document.createElement('img');
+            newImg.src = customIconMapping[condition];
+            newImg.alt = condition;
+            newImg.classList.add('forecast-icon');
+            currentIconBox.appendChild(newImg);
+            iconDropdown.style.display = 'none';
+            currentIconBox = null;
+          }
+        });
+        iconDropdown.appendChild(item);
+      }
+      
+      document.querySelectorAll('.icon-box').forEach(box => {
+        box.addEventListener('mouseenter', function(e) {
+          currentIconBox = box;
+          const rect = box.getBoundingClientRect();
+          iconDropdown.style.top = (rect.bottom + window.scrollY) + 'px';
+          iconDropdown.style.left = (rect.left + window.scrollX) + 'px';
+          iconDropdown.style.display = 'block';
+        });
+        box.addEventListener('mouseleave', function(e) {
+          setTimeout(() => {
+            if (!iconDropdown.matches(':hover')) {
+              iconDropdown.style.display = 'none';
+              currentIconBox = null;
+            }
+          }, 200);
+        });
+      });
+      
+      iconDropdown.addEventListener('mouseleave', function(e) {
+        iconDropdown.style.display = 'none';
+        currentIconBox = null;
+      });
+      
+      /**************************************
+       * Right-Click Save Functionality
+       **************************************/
+      document.getElementById('canvas').addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        html2canvas(this).then(function(capturedCanvas) {
+          const link = document.createElement('a');
+          link.download = 'forecast_overlay.png';
+          link.href = capturedCanvas.toDataURL();
+          link.click();
+        });
+      });
+    </script>
+  </div>
+  
+  <!-- Password Overlay -->
+  <div id="passwordOverlay">
+    <div id="passwordBox">
+      <h2>Please Enter Password</h2>
+      <input type="password" id="passwordInput" placeholder="Password" />
+      <br/>
+      <button id="passwordSubmit">Submit</button>
+      <p id="passwordError" style="color:red; display:none;">Incorrect Password</p>
+    </div>
+  </div>
+  
+  <script>
+    // When the correct password is entered, remove the blur and hide the overlay.
+    document.getElementById('passwordSubmit').addEventListener('click', function() {
+      const passwordInput = document.getElementById('passwordInput');
+      const passwordError = document.getElementById('passwordError');
+      if (passwordInput.value === "Belpark#2025!") {
+        document.getElementById('mainContent').style.filter = "none";
+        document.getElementById('passwordOverlay').style.display = "none";
+      } else {
+        passwordError.style.display = "block";
+      }
+    });
+    // Allow pressing Enter to submit.
+    document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('passwordSubmit').click();
+      }
+    });
+  </script>
+</body>
+</html>

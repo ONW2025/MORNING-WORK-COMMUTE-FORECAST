@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Draggable Ohio City Names with Dropdown Menus</title>
+  <style>
+    /* Background image for the page - 15% smaller */
+    body {
+      background-image: url('WEEKEND PREVIEW.PNG'); /* Replace with your PNG file path */
+      background-size: 85% auto;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-attachment: fixed;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      position: relative;
+      height: 100vh;
+    }
+
+    /* Tooltip style */
+    .tooltip {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      pointer-events: none;
+      display: none;
+      z-index: 1000;
+    }
+
+    /* Container for a main city with its dropdown */
+    .city {
+      position: absolute;  /* Allows movement via top/left */
+      cursor: move;
+      padding: 5px;
+      user-select: none;
+      z-index: 500;
+    }
+
+    /* Show dropdown when hovering over the entire city container */
+    .city:hover .dropdown {
+      display: block;
+    }
+
+    /* The visible city name (the header of the dropdown) */
+    .city-header {
+      display: flex;
+      align-items: center;
+    }
+
+    /* The dropdown arrow */
+    .dropdown-toggle {
+      margin-left: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      user-select: none;
+    }
+
+    /* The dropdown menu container (hidden by default) */
+    .dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;  /* Positioned just below the header */
+      left: 0;
+      background-color: rgba(255, 255, 255, 0.9);
+      border: 1px solid #ccc;
+      padding: 5px;
+      margin-top: 2px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      max-height: 300px;  /* Optional: limit height if the list is long */
+      overflow-y: auto;   /* Scroll if too many items */
+    }
+
+    /* Each dropdown item (extra city) */
+    .dropdown-item {
+      padding: 3px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .dropdown-item:hover {
+      background-color: #ddd;
+    }
+
+    /* Customization for each main city (adjust positions, font, color, size, glow, etc.) */
+    .city1 {
+      top: 117px;
+      left: 264px;
+      font-family: 'Overpass Black', sans-serif;
+      color: #FFFFFF;
+      font-size: 42px;
+      text-shadow: 0 0 5px #000000, 0 0 10px #000000, 0 0 20px #000000;
+    }
+    .city2 {
+      top: 117px;
+      left: 664px;
+      font-family: 'Overpass Black', sans-serif;
+      color: #FFFFFF;
+      font-size: 42px;
+      text-shadow: 0 0 5px #000000, 0 0 10px #000000, 0 0 20px #000000;
+    }
+    .city3 {
+      top: 117px;
+      left: 1062px;
+      font-family: 'Overpass Black', sans-serif;
+      color: #FFFFFF;
+      font-size: 42px;
+      text-shadow: 0 0 5px #000000, 0 0 10px #000000, 0 0 20px #000000;
+    }
+    .city4 {
+      top: 117px;
+      left: 1456px;
+      font-family: 'Overpass Black', sans-serif;
+      color: #FFFFFF;
+      font-size: 42px;
+      text-shadow: 0 0 5px #000000, 0 0 10px #000000, 0 0 20px #000000;
+    }
+    .city5 {
+      top: 513px;
+      left: 283px;
+      font-family: 'Overpass Black', sans-serif;
+      color: #FFFFFF;
+      font-size: 42px;
+      text-shadow: 0 0 5px #000000, 0 0 10px #000000, 0 0 20px #000000;
+    }
+    .city6 {
+      top: 513px;
+      left: 680px;
+      font-family: 'Overpass Black', sans-serif;
+      color: #FFFFFF;
+      font-size: 42px;
+      text-shadow: 0 0 5px #000000, 0 0 10px #000000, 0 0 20px #000000;
+    }
+    .city7 {
+      top: 513px;
+      left: 1040px;
+      font-family: 'Overpass Black', sans-serif;
+      color: #FFFFFF;
+      font-size: 42px;
+      text-shadow: 0 0 5px #000000, 0 0 10px #000000, 0 0 20px #000000;
+    }
+    .city8 {
+      top: 513px;
+      left: 1351px;
+      font-family: 'Overpass Black', sans-serif;
+      color: #FFFFFF;
+      font-size: 42px;
+      text-shadow: 0 0 5px #000000, 0 0 10px #000000, 0 0 20px #000000;
+    }
+  </style>
+</head>
+<body>
+  <!-- Tooltip element -->
+  <div class="tooltip" id="tooltip"></div>
+
+  <!-- Main city elements (only 8 are shown). Each contains a header and a dropdown list of all cities. -->
+
+  <!-- City 1: akron -->
+  <div class="city city1">
+    <div class="city-header">
+      <span class="city-name">akron</span>
+      <span class="dropdown-toggle" data-city="1">▼</span>
+    </div>
+    <div class="dropdown" id="dropdown-1">
+      <!-- All 32 Ohio cities -->
+      <div class="dropdown-item">akron</div>
+      <div class="dropdown-item">ashtabula</div>
+      <div class="dropdown-item">athens</div>
+      <div class="dropdown-item">celina</div>
+      <div class="dropdown-item">chillicothe</div>
+      <div class="dropdown-item">cirlceville</div>
+      <div class="dropdown-item">cincinnati</div>
+      <div class="dropdown-item">celeveland</div>
+      <div class="dropdown-item">columbus</div>
+      <div class="dropdown-item">dayton</div>
+      <div class="dropdown-item">delaware</div>
+      <div class="dropdown-item">defiance</div>
+      <div class="dropdown-item">elryria</div>
+      <div class="dropdown-item">gallipolis</div>
+      <div class="dropdown-item">findlay</div>
+      <div class="dropdown-item">jackson</div>
+      <div class="dropdown-item">lancaster</div>
+      <div class="dropdown-item">luckey</div>
+      <div class="dropdown-item">lorain</div>
+      <div class="dropdown-item">lima</div>
+      <div class="dropdown-item">logan</div>
+      <div class="dropdown-item">mansfield</div>
+      <div class="dropdown-item">marion</div>
+      <div class="dropdown-item">newark</div>
+      <div class="dropdown-item">portsmouth</div>
+      <div class="dropdown-item">sandusky</div>
+      <div class="dropdown-item">tiffin</div>
+      <div class="dropdown-item">toledo</div>
+      <div class="dropdown-item">washington</div>
+      <div class="dropdown-item">court house</div>
+      <div class="dropdown-item">youngstown</div>
+      <div class="dropdown-item">zanesville</div>
+    </div>
+  </div>
+
+  <!-- City 2: ashtabula -->
+  <div class="city city2">
+    <div class="city-header">
+      <span class="city-name">ashtabula</span>
+      <span class="dropdown-toggle" data-city="2">▼</span>
+    </div>
+    <div class="dropdown" id="dropdown-2">
+      <!-- All 32 Ohio cities -->
+      <div class="dropdown-item">akron</div>
+      <div class="dropdown-item">ashtabula</div>
+      <div class="dropdown-item">athens</div>
+      <div class="dropdown-item">celina</div>
+      <div class="dropdown-item">chillicothe</div>
+      <div class="dropdown-item">cirlceville</div>
+      <div class="dropdown-item">cincinnati</div>
+      <div class="dropdown-item">celeveland</div>
+      <div class="dropdown-item">columbus</div>
+      <div class="dropdown-item">dayton</div>
+      <div class="dropdown-item">delaware</div>
+      <div class="dropdown-item">defiance</div>
+      <div class="dropdown-item">elryria</div>
+      <div class="dropdown-item">gallipolis</div>
+      <div class="dropdown-item">findlay</div>
+      <div class="dropdown-item">jackson</div>
+      <div class="dropdown-item">lancaster</div>
+      <div class="dropdown-item">luckey</div>
+      <div class="dropdown-item">lorain</div>
+      <div class="dropdown-item">lima</div>
+      <div class="dropdown-item">logan</div>
+      <div class="dropdown-item">mansfield</div>
+      <div class="dropdown-item">marion</div>
+      <div class="dropdown-item">newark</div>
+      <div class="dropdown-item">portsmouth</div>
+      <div class="dropdown-item">sandusky</div>
+      <div class="dropdown-item">tiffin</div>
+      <div class="dropdown-item">toledo</div>
+      <div class="dropdown-item">washington</div>
+      <div class="dropdown-item">court house</div>
+      <div class="dropdown-item">youngstown</div>
+      <div class="dropdown-item">zanesville</div>
+    </div>
+  </div>
+
+  <!-- City 3: athens -->
+  <div class="city city3">
+    <div class="city-header">
+      <span class="city-name">athens</span>
+      <span class="dropdown-toggle" data-city="3">▼</span>
+    </div>
+    <div class="dropdown" id="dropdown-3">
+      <!-- All 32 Ohio cities -->
+      <div class="dropdown-item">akron</div>
+      <div class="dropdown-item">ashtabula</div>
+      <div class="dropdown-item">athens</div>
+      <div class="dropdown-item">celina</div>
+      <div class="dropdown-item">chillicothe</div>
+      <div class="dropdown-item">cirlceville</div>
+      <div class="dropdown-item">cincinnati</div>
+      <div class="dropdown-item">celeveland</div>
+      <div class="dropdown-item">columbus</div>
+      <div class="dropdown-item">dayton</div>
+      <div class="dropdown-item">delaware</div>
+      <div class="dropdown-item">defiance</div>
+      <div class="dropdown-item">elryria</div>
+      <div class="dropdown-item">gallipolis</div>
+      <div class="dropdown-item">findlay</div>
+      <div class="dropdown-item">jackson</div>
+      <div class="dropdown-item">lancaster</div>
+      <div class="dropdown-item">luckey</div>
+      <div class="dropdown-item">lorain</div>
+      <div class="dropdown-item">lima</div>
+      <div class="dropdown-item">logan</div>
+      <div class="dropdown-item">mansfield</div>
+      <div class="dropdown-item">marion</div>
+      <div class="dropdown-item">newark</div>
+      <div class="dropdown-item">portsmouth</div>
+      <div class="dropdown-item">sandusky</div>
+      <div class="dropdown-item">tiffin</div>
+      <div class="dropdown-item">toledo</div>
+      <div class="dropdown-item">washington</div>
+      <div class="dropdown-item">court house</div>
+      <div class="dropdown-item">youngstown</div>
+      <div class="dropdown-item">zanesville</div>
+    </div>
+  </div>
+
+  <!-- City 4: celina -->
+  <div class="city city4">
+    <div class="city-header">
+      <span class="city-name">celina</span>
+      <span class="dropdown-toggle" data-city="4">▼</span>
+    </div>
+    <div class="dropdown" id="dropdown-4">
+      <!-- All 32 Ohio cities -->
+      <div class="dropdown-item">akron</div>
+      <div class="dropdown-item">ashtabula</div>
+      <div class="dropdown-item">athens</div>
+      <div class="dropdown-item">celina</div>
+      <div class="dropdown-item">chillicothe</div>
+      <div class="dropdown-item">cirlceville</div>
+      <div class="dropdown-item">cincinnati</div>
+      <div class="dropdown-item">celeveland</div>
+      <div class="dropdown-item">columbus</div>
+      <div class="dropdown-item">dayton</div>
+      <div class="dropdown-item">delaware</div>
+      <div class="dropdown-item">defiance</div>
+      <div class="dropdown-item">elryria</div>
+      <div class="dropdown-item">gallipolis</div>
+      <div class="dropdown-item">findlay</div>
+      <div class="dropdown-item">jackson</div>
+      <div class="dropdown-item">lancaster</div>
+      <div class="dropdown-item">luckey</div>
+      <div class="dropdown-item">lorain</div>
+      <div class="dropdown-item">lima</div>
+      <div class="dropdown-item">logan</div>
+      <div class="dropdown-item">mansfield</div>
+      <div class="dropdown-item">marion</div>
+      <div class="dropdown-item">newark</div>
+      <div class="dropdown-item">portsmouth</div>
+      <div class="dropdown-item">sandusky</div>
+      <div class="dropdown-item">tiffin</div>
+      <div class="dropdown-item">toledo</div>
+      <div class="dropdown-item">washington</div>
+      <div class="dropdown-item">court house</div>
+      <div class="dropdown-item">youngstown</div>
+      <div class="dropdown-item">zanesville</div>
+    </div>
+  </div>
+
+  <!-- City 5: chillicothe -->
+  <div class="city city5">
+    <div class="city-header">
+      <span class="city-name">chillicothe</span>
+      <span class="dropdown-toggle" data-city="5">▼</span>
+    </div>
+    <div class="dropdown" id="dropdown-5">
+      <!-- All 32 Ohio cities -->
+      <div class="dropdown-item">akron</div>
+      <div class="dropdown-item">ashtabula</div>
+      <div class="dropdown-item">athens</div>
+      <div class="dropdown-item">celina</div>
+      <div class="dropdown-item">chillicothe</div>
+      <div class="dropdown-item">cirlceville</div>
+      <div class="dropdown-item">cincinnati</div>
+      <div class="dropdown-item">celeveland</div>
+      <div class="dropdown-item">columbus</div>
+      <div class="dropdown-item">dayton</div>
+      <div class="dropdown-item">delaware</div>
+      <div class="dropdown-item">defiance</div>
+      <div class="dropdown-item">elryria</div>
+      <div class="dropdown-item">gallipolis</div>
+      <div class="dropdown-item">findlay</div>
+      <div class="dropdown-item">jackson</div>
+      <div class="dropdown-item">lancaster</div>
+      <div class="dropdown-item">luckey</div>
+      <div class="dropdown-item">lorain</div>
+      <div class="dropdown-item">lima</div>
+      <div class="dropdown-item">logan</div>
+      <div class="dropdown-item">mansfield</div>
+      <div class="dropdown-item">marion</div>
+      <div class="dropdown-item">newark</div>
+      <div class="dropdown-item">portsmouth</div>
+      <div class="dropdown-item">sandusky</div>
+      <div class="dropdown-item">tiffin</div>
+      <div class="dropdown-item">toledo</div>
+      <div class="dropdown-item">washington</div>
+      <div class="dropdown-item">court house</div>
+      <div class="dropdown-item">youngstown</div>
+      <div class="dropdown-item">zanesville</div>
+    </div>
+  </div>
+
+  <!-- City 6: cirlceville -->
+  <div class="city city6">
+    <div class="city-header">
+      <span class="city-name">cirlceville</span>
+      <span class="dropdown-toggle" data-city="6">▼</span>
+    </div>
+    <div class="dropdown" id="dropdown-6">
+      <!-- All 32 Ohio cities -->
+      <div class="dropdown-item">akron</div>
+      <div class="dropdown-item">ashtabula</div>
+      <div class="dropdown-item">athens</div>
+      <div class="dropdown-item">celina</div>
+      <div class="dropdown-item">chillicothe</div>
+      <div class="dropdown-item">cirlceville</div>
+      <div class="dropdown-item">cincinnati</div>
+      <div class="dropdown-item">celeveland</div>
+      <div class="dropdown-item">columbus</div>
+      <div class="dropdown-item">dayton</div>
+      <div class="dropdown-item">delaware</div>
+      <div class="dropdown-item">defiance</div>
+      <div class="dropdown-item">elryria</div>
+      <div class="dropdown-item">gallipolis</div>
+      <div class="dropdown-item">findlay</div>
+      <div class="dropdown-item">jackson</div>
+      <div class="dropdown-item">lancaster</div>
+      <div class="dropdown-item">luckey</div>
+      <div class="dropdown-item">lorain</div>
+      <div class="dropdown-item">lima</div>
+      <div class="dropdown-item">logan</div>
+      <div class="dropdown-item">mansfield</div>
+      <div class="dropdown-item">marion</div>
+      <div class="dropdown-item">newark</div>
+      <div class="dropdown-item">portsmouth</div>
+      <div class="dropdown-item">sandusky</div>
+      <div class="dropdown-item">tiffin</div>
+      <div class="dropdown-item">toledo</div>
+      <div class="dropdown-item">washington</div>
+      <div class="dropdown-item">court house</div>
+      <div class="dropdown-item">youngstown</div>
+      <div class="dropdown-item">zanesville</div>
+    </div>
+  </div>
+
+  <!-- City 7: cincinnati -->
+  <div class="city city7">
+    <div class="city-header">
+      <span class="city-name">cincinnati</span>
+      <span class="dropdown-toggle" data-city="7">▼</span>
+    </div>
+    <div class="dropdown" id="dropdown-7">
+      <!-- All 32 Ohio cities -->
+      <div class="dropdown-item">akron</div>
+      <div class="dropdown-item">ashtabula</div>
+      <div class="dropdown-item">athens</div>
+      <div class="dropdown-item">celina</div>
+      <div class="dropdown-item">chillicothe</div>
+      <div class="dropdown-item">cirlceville</div>
+      <div class="dropdown-item">cincinnati</div>
+      <div class="dropdown-item">celeveland</div>
+      <div class="dropdown-item">columbus</div>
+      <div class="dropdown-item">dayton</div>
+      <div class="dropdown-item">delaware</div>
+      <div class="dropdown-item">defiance</div>
+      <div class="dropdown-item">elryria</div>
+      <div class="dropdown-item">gallipolis</div>
+      <div class="dropdown-item">findlay</div>
+      <div class="dropdown-item">jackson</div>
+      <div class="dropdown-item">lancaster</div>
+      <div class="dropdown-item">luckey</div>
+      <div class="dropdown-item">lorain</div>
+      <div class="dropdown-item">lima</div>
+      <div class="dropdown-item">logan</div>
+      <div class="dropdown-item">mansfield</div>
+      <div class="dropdown-item">marion</div>
+      <div class="dropdown-item">newark</div>
+      <div class="dropdown-item">portsmouth</div>
+      <div class="dropdown-item">sandusky</div>
+      <div class="dropdown-item">tiffin</div>
+      <div class="dropdown-item">toledo</div>
+      <div class="dropdown-item">washington</div>
+      <div class="dropdown-item">court house</div>
+      <div class="dropdown-item">youngstown</div>
+      <div class="dropdown-item">zanesville</div>
+    </div>
+  </div>
+
+  <!-- City 8: celeveland -->
+  <div class="city city8">
+    <div class="city-header">
+      <span class="city-name">celeveland</span>
+      <span class="dropdown-toggle" data-city="8">▼</span>
+    </div>
+    <div class="dropdown" id="dropdown-8">
+      <!-- All 32 Ohio cities -->
+      <div class="dropdown-item">akron</div>
+      <div class="dropdown-item">ashtabula</div>
+      <div class="dropdown-item">athens</div>
+      <div class="dropdown-item">celina</div>
+      <div class="dropdown-item">chillicothe</div>
+      <div class="dropdown-item">cirlceville</div>
+      <div class="dropdown-item">cincinnati</div>
+      <div class="dropdown-item">celeveland</div>
+      <div class="dropdown-item">columbus</div>
+      <div class="dropdown-item">dayton</div>
+      <div class="dropdown-item">delaware</div>
+      <div class="dropdown-item">defiance</div>
+      <div class="dropdown-item">elryria</div>
+      <div class="dropdown-item">gallipolis</div>
+      <div class="dropdown-item">findlay</div>
+      <div class="dropdown-item">jackson</div>
+      <div class="dropdown-item">lancaster</div>
+      <div class="dropdown-item">luckey</div>
+      <div class="dropdown-item">lorain</div>
+      <div class="dropdown-item">lima</div>
+      <div class="dropdown-item">logan</div>
+      <div class="dropdown-item">mansfield</div>
+      <div class="dropdown-item">marion</div>
+      <div class="dropdown-item">newark</div>
+      <div class="dropdown-item">portsmouth</div>
+      <div class="dropdown-item">sandusky</div>
+      <div class="dropdown-item">tiffin</div>
+      <div class="dropdown-item">toledo</div>
+      <div class="dropdown-item">washington</div>
+      <div class="dropdown-item">court house</div>
+      <div class="dropdown-item">youngstown</div>
+      <div class="dropdown-item">zanesville</div>
+    </div>
+  </div>
+
+  <script>
+    // DRAGGING FUNCTIONALITY
+    const cities = document.querySelectorAll('.city');
+    let activeElement = null;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    cities.forEach(city => {
+      // Make the city draggable
+      city.addEventListener('mousedown', dragStart);
+      city.addEventListener('touchstart', dragStart);
+
+      // Tooltip events (for the whole city container)
+      city.addEventListener('mouseenter', showTooltip);
+      city.addEventListener('mouseleave', hideTooltip);
+      city.addEventListener('mousemove', moveTooltip);
+    });
+
+    function dragStart(e) {
+      // If the target is the dropdown toggle, do not start dragging.
+      if (e.target.classList.contains('dropdown-toggle')) return;
+
+      activeElement = e.currentTarget;
+      const startX = e.clientX || e.touches[0].clientX;
+      const startY = e.clientY || e.touches[0].clientY;
+      const rect = activeElement.getBoundingClientRect();
+      offsetX = startX - rect.left;
+      offsetY = startY - rect.top;
+
+      document.addEventListener('mousemove', dragging);
+      document.addEventListener('mouseup', dragEnd);
+      document.addEventListener('touchmove', dragging);
+      document.addEventListener('touchend', dragEnd);
+    }
+
+    function dragging(e) {
+      if (!activeElement) return;
+      e.preventDefault(); // Prevent scrolling on touch devices
+      const clientX = e.clientX || e.touches[0].clientX;
+      const clientY = e.clientY || e.touches[0].clientY;
+      activeElement.style.left = (clientX - offsetX) + 'px';
+      activeElement.style.top  = (clientY - offsetY) + 'px';
+      updateTooltip(activeElement);
+    }
+
+    function dragEnd() {
+      activeElement = null;
+      document.removeEventListener('mousemove', dragging);
+      document.removeEventListener('mouseup', dragEnd);
+      document.removeEventListener('touchmove', dragging);
+      document.removeEventListener('touchend', dragEnd);
+    }
+
+    // TOOLTIP FUNCTIONALITY
+    const tooltip = document.getElementById('tooltip');
+
+    function updateTooltip(element) {
+      const left = element.style.left;
+      const top = element.style.top;
+      tooltip.textContent = 'Left: ' + left + ' | Top: ' + top;
+    }
+
+    function showTooltip(e) {
+      updateTooltip(e.currentTarget);
+      tooltip.style.display = 'block';
+      positionTooltip(e);
+    }
+    function hideTooltip() {
+      tooltip.style.display = 'none';
+    }
+    function moveTooltip(e) {
+      positionTooltip(e);
+    }
+    function positionTooltip(e) {
+      const x = e.clientX || (e.touches && e.touches[0].clientX);
+      const y = e.clientY || (e.touches && e.touches[0].clientY);
+      tooltip.style.left = (x + 10) + 'px';
+      tooltip.style.top = (y + 10) + 'px';
+    }
+
+    // DROPDOWN TOGGLE FUNCTIONALITY (for click events)
+    const dropdownToggles = document.querySelectorAll('.dropdown-toggle');
+    dropdownToggles.forEach(toggle => {
+      toggle.addEventListener('click', function(e) {
+        // Prevent triggering dragStart on the parent
+        e.stopPropagation();
+        const cityId = this.getAttribute('data-city');
+        const dropdown = document.getElementById('dropdown-' + cityId);
+        // Toggle display on click (hover still works)
+        if (dropdown.style.display === 'block') {
+          dropdown.style.display = 'none';
+        } else {
+          dropdown.style.display = 'block';
+        }
+      });
+    });
+
+    // (Optional) Handle dropdown item clicks.
+    const dropdownItems = document.querySelectorAll('.dropdown-item');
+    dropdownItems.forEach(item => {
+      item.addEventListener('click', function(e) {
+        // For demonstration, alert the selected city.
+        alert('You selected ' + this.textContent);
+        // Optionally hide the dropdown after selection.
+        this.parentElement.style.display = 'none';
+        // Prevent the click from bubbling up to the city element.
+        e.stopPropagation();
+      });
+    });
+  </script>
+</body>
+</html>
